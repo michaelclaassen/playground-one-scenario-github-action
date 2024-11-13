@@ -76,9 +76,9 @@ jobs:
           
           [ $(jq '.secrets.unmitigatedFindingsCount' result.json) -ne 0 ] && fail_sec=true
 
-          [ "$fail_vul" = true ] && echo "*** Vulnerability threshold exceeded ***" > vulnerabilities || true
-          [ "$fail_mal" = true ] && echo "*** Malware found ***" > malware || true
-          [ "$fail_sec" = true ] && echo "*** Secrets found ***" > secrets || true
+          [ "$fail_vul" = "true" ] && echo "*** Vulnerability threshold exceeded ***" > vulnerabilities || true
+          [ "$fail_mal" = "true" ] && echo "*** Malware found ***" > malware || true
+          [ "$fail_sec" = "true" ] && echo "*** Secrets found ***" > secrets || true
 
       # Upload Scan Result and SBOM Artifact if available
       - name: Upload Scan Result Artifact
