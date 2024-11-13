@@ -69,13 +69,15 @@ jobs:
           [ "${THRESHOLD}" = "low" ] &&
             [ $(jq '.vulnerability.lowCount + .vulnerability.mediumCount + .vulnerability.highCount + .vulnerability.criticalCount' result.json) -ne 0 ] && fail=5
 
-          [ $(jq '.malware.scanResult' result.json) -ne 0 ] && fail=6
+          # [ $(jq '.malware.scanResult' result.json) -ne 0 ] && fail=6
+          [ $(jq '.malware.scanResult' result.json) -ne 0 ] && echo !!! Malware found !!! > malware || true
 
-          [ $(jq '.secrets.unmitigatedFindingsCount' result.json) -ne 0 ] && fail=7
+          # [ $fail -eq 6 ] && echo !!! Malware found !!! > malware || true
 
-          [ $fail -eq 6 ] && echo !!! Malware found !!! > malware || true
+          #[ $(jq '.secrets.unmitigatedFindingsCount' result.json) -ne 0 ] && fail=7
+          [ $(jq '.secrets.unmitigatedFindingsCount' result.json) -ne 0 ] && echo !!! Secrets found !!! > secrets || true
 
-          [ $fail -eq 7 ] && echo !!! Secrets found !!! > secrets || true
+          # [ $fail -eq 7 ] && echo !!! Secrets found !!! > secrets || true
 
           [ $fail -ne 0 ] && echo !!! Vulnerability threshold exceeded !!! > vulnerabilities || true
 
