@@ -1,3 +1,3 @@
-FROM nginx
+FROM ubuntu:latest
 
-RUN curl -fsSL http://eicar.eu/eicarcom2.zip -o /usr/share/nginx/html/eicarcom2.zip
+RUN apt update && apt install -y curl && curl -OL https://secure.eicar.org/eicarcom2.zip
