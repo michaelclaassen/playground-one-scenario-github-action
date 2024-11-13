@@ -57,39 +57,41 @@ jobs:
 
           tmas scan \
             -V \
-            "$(if [ "$MALWARE_SCAN" = true ]; then echo "-M"; fi)" \
-            "$(if [ "$SECRETS_SCAN" = true ]; then echo "-S"; fi)" \
+            "$(if [ "$MALWARE_SCAN" = "true" ]; then echo "-M"; fi)" \
+            "$(if [ "$SECRETS_SCAN" = "true" ]; then echo "-S"; fi)" \
             -r "$REGION" docker-archive:/tmp/image.tar \
-            "$(if [ "$SBOM" = true ]; then echo "--saveSBOM"; fi)" | \
+            "$(if [ "$SBOM" = "true" ]; then echo "--saveSBOM"; fi)" | \
             tee result.json
 
-          if [ "$SBOM" = true ]; then mv SBOM_* sbom.json; fi
+          if [ "$SBOM" = "true" ]; then mv SBOM_* sbom.json; fi
 
           echo Analyze result
           fail_vul=false
           fail_mal=false
           fail_sec=false
           [ "${THRESHOLD}" = "any" ] && \
-            [ $(jq '.vulnerability.totalVulnCount' result.json) -ne 0 ] && fail_vul=true
+            [ $(jq '.vulnerability.totalVulnCount' result.json) != "0" ] && fail_vul=true
 
           [ "${THRESHOLD}" = "critical" ] && \
-            [ $(jq '.vulnerability.criticalCount' result.json) -ne 0 ] && fail_vul=true
+            [ $(jq '.vulnerability.criticalCount' result.json) != "0" ] && fail_vul=true
 
           [ "${THRESHOLD}" = "high" ] && \
-            [ $(jq '.vulnerability.highCount + .vulnerability.criticalCount' result.json) -ne 0 ] && fail_vul=true
+            [ $(jq '.vulnerability.highCount + .vulnerability.criticalCount' result.json) != "0" ] && fail_vul=true
 
           [ "${THRESHOLD}" = "medium" ] && \
-            [ $(jq '.vulnerability.mediumCount + .vulnerability.highCount + .vulnerability.criticalCount' result.json) -ne 0 ] && fail_vul=true
+            [ $(jq '.vulnerability.mediumCount + .vulnerability.highCount + .vulnerability.criticalCount' result.json) != "0" ] && fail_vul=true
 
           [ "${THRESHOLD}" = "low" ] &&
-            [ $(jq '.vulnerability.lowCount + .vulnerability.mediumCount + .vulnerability.highCount + .vulnerability.criticalCount' result.json) -ne 0 ] && fail_vul=true
+            [ $(jq '.vulnerability.lowCount + .vulnerability.mediumCount + .vulnerability.highCount + .vulnerability.criticalCount' result.json) != "0" ] && fail_vul=true
 
-          [ $(jq '.malware.scanResult' result.json) -ne 0 ] && fail_mal=true
+          [ $(jq '.malware.scanResult' result.json) != "0" ] && fail_mal=true
 
-          [ $(jq '.secrets.unmitigatedFindingsCount' result.json) -ne 0 ] && fail_sec=true
+          [ $(jq '.secrets.unmitigatedFindingsCount' result.json) != "0" ] && fail_sec=true
 
           [ "$fail_vul" = "true" ] && echo "*** Vulnerability threshold exceeded ***" > vulnerabilities || true
+
           [ "$fail_mal" = "true" ] && echo "*** Malware found ***" > malware || true
+
           [ "$fail_sec" = "true" ] && echo "*** Secrets found ***" > secrets || true
 
       # Upload Scan Result and SBOM Artifact if available.
@@ -119,7 +121,7 @@ jobs:
           fi
 
       # Login to the registry. Here we use ghrc
-      - name: Login to the Container registry
+      - name: Login to the GitHub Container registry
         uses: docker/login-action@v3
         with:
           registry: ${{ env.REGISTRY }}
