@@ -12,7 +12,7 @@ env:
   IMAGE_NAME: ${{ github.repository }}
   TMAS_API_KEY: ${{ secrets.TMAS_API_KEY }}
   REGION: us-east-1
-  THRESHOLD: "critical"
+  THRESHOLD: "medium"
   MALWARE_SCAN: true
   SECRETS_SCAN: true
   FAIL_ACTION: true
