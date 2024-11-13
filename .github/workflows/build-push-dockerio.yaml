@@ -12,6 +12,7 @@ env:
   THRESHOLD: "critical"
   MALWARE_SCAN: true
   SECRETS_SCAN: true
+  FAIL_ACTION: true
 
 jobs:
   docker:
@@ -53,21 +54,23 @@ jobs:
           if [ "$SBOM" = true ]; then mv SBOM_* sbom.json; fi
 
           echo Analyze result
-          fail=0
+          fail_vul=false
+          fail_mal=false
+          fail_sec=false
           [ "${THRESHOLD}" = "any" ] && \
-            [ $(jq '.vulnerability.totalVulnCount' result.json) -ne 0 ] && fail=true
+            [ $(jq '.vulnerability.totalVulnCount' result.json) -ne 0 ] && fail_vul=true
 
           [ "${THRESHOLD}" = "critical" ] && \
-            [ $(jq '.vulnerability.criticalCount' result.json) -ne 0 ] && fail=true
+            [ $(jq '.vulnerability.criticalCount' result.json) -ne 0 ] && fail_vul=true
 
           [ "${THRESHOLD}" = "high" ] && \
-            [ $(jq '.vulnerability.highCount + .vulnerability.criticalCount' result.json) -ne 0 ] && fail=true
+            [ $(jq '.vulnerability.highCount + .vulnerability.criticalCount' result.json) -ne 0 ] && fail_vul=true
 
           [ "${THRESHOLD}" = "medium" ] && \
-            [ $(jq '.vulnerability.mediumCount + .vulnerability.highCount + .vulnerability.criticalCount' result.json) -ne 0 ] && fail=true
+            [ $(jq '.vulnerability.mediumCount + .vulnerability.highCount + .vulnerability.criticalCount' result.json) -ne 0 ] && fail_vul=true
 
           [ "${THRESHOLD}" = "low" ] &&
-            [ $(jq '.vulnerability.lowCount + .vulnerability.mediumCount + .vulnerability.highCount + .vulnerability.criticalCount' result.json) -ne 0 ] && fail=true
+            [ $(jq '.vulnerability.lowCount + .vulnerability.mediumCount + .vulnerability.highCount + .vulnerability.criticalCount' result.json) -ne 0 ] && fail_vul=true
 
           [ $(jq '.malware.scanResult' result.json) -ne 0 ] && fail_mal=true
           
@@ -123,7 +126,7 @@ jobs:
         run: |
           echo 'Digest: ${{ steps.build.outputs.digest }}'
           echo 'Tags: ${{ steps.meta.outputs.tags }}'
-          
+
       # Rescan in the registry to support admission control
       - name: Registry Scan
         run: |

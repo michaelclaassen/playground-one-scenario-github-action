@@ -56,13 +56,20 @@ jobs:
           # Install tmas latest version
           curl -sL https://gist.githubusercontent.com/mawinkler/72a89148b3bcf7ca06b1f26bc84d763f/raw | bash
 
-          tmas scan -V "$(if [ "$MALWARE_SCAN" = true ]; then echo "-M"; fi)" -r "$REGION" docker-archive:/tmp/image.tar "$(if [ "$SBOM" = true ]; then echo "--saveSBOM"; fi)" | tee result.json
+          tmas scan \
+            -V \
+            "$(if [ "$MALWARE_SCAN" = true ]; then echo "-M"; fi)" \
+            "$(if [ "$SECRETS_SCAN" = true ]; then echo "-S"; fi)" \
+            -r "$REGION" docker-archive:/tmp/image.tar \
+            "$(if [ "$SBOM" = true ]; then echo "--saveSBOM"; fi)" | \
+            tee result.json
 
           if [ "$SBOM" = true ]; then mv SBOM_* sbom.json; fi
 
           # Analyze result
           fail_vul=false
           fail_mal=false
+          fail_sec=false
           [ "${THRESHOLD}" = "any" ] && \
             [ $(jq '.vulnerability.totalVulnCount' result.json) -ne 0 ] && fail_vul=true
 
