@@ -65,23 +65,23 @@ jobs:
           fail_sec=false
           echo 1
           [ "${THRESHOLD}" = "any" ] && \
-            [ $(jq '.vulnerability.totalVulnCount' result.json) -ne 0 ] && fail_vul=true
+            [ $(jq '.vulnerability.totalVulnCount' result.json) != "0" ] && fail_vul=true
           echo 2
           [ "${THRESHOLD}" = "critical" ] && \
-            [ $(jq '.vulnerability.criticalCount' result.json) -ne 0 ] && fail_vul=true
+            [ $(jq '.vulnerability.criticalCount' result.json) != "0" ] && fail_vul=true
           echo 3
           [ "${THRESHOLD}" = "high" ] && \
-            [ $(jq '.vulnerability.highCount + .vulnerability.criticalCount' result.json) -ne 0 ] && fail_vul=true
+            [ $(jq '.vulnerability.highCount + .vulnerability.criticalCount' result.json) != "0" ] && fail_vul=true
           echo 4
           [ "${THRESHOLD}" = "medium" ] && \
-            [ $(jq '.vulnerability.mediumCount + .vulnerability.highCount + .vulnerability.criticalCount' result.json) -ne 0 ] && fail_vul=true
+            [ $(jq '.vulnerability.mediumCount + .vulnerability.highCount + .vulnerability.criticalCount' result.json) != "0" ] && fail_vul=true
           echo 5
           [ "${THRESHOLD}" = "low" ] &&
-            [ $(jq '.vulnerability.lowCount + .vulnerability.mediumCount + .vulnerability.highCount + .vulnerability.criticalCount' result.json) -ne 0 ] && fail_vul=true
+            [ $(jq '.vulnerability.lowCount + .vulnerability.mediumCount + .vulnerability.highCount + .vulnerability.criticalCount' result.json) != "0" ] && fail_vul=true
           echo 6
-          [ $(jq '.malware.scanResult' result.json) -ne 0 ] && fail_mal=true
+          [ $(jq '.malware.scanResult' result.json) != "0" ] && fail_mal=true
           echo 7
-          [ $(jq '.secrets.unmitigatedFindingsCount' result.json) -ne 0 ] && fail_sec=true
+          [ $(jq '.secrets.unmitigatedFindingsCount' result.json) != "0" ] && fail_sec=true
           echo 8
           [ "$fail_vul" = "true" ] && echo "*** Vulnerability threshold exceeded ***" > vulnerabilities || true
           echo 9
