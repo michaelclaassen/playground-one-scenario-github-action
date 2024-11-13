@@ -64,19 +64,19 @@ jobs:
           fail_mal=false
           fail_sec=false
           [ "${THRESHOLD}" = "any" ] && \
-            [ $(jq '.vulnerability.totalVulnCount' result.json) != "0" ] && fail_vul=true
+            [ $(jq '.vulnerabilities.totalVulnCount' result.json) != "0" ] && fail_vul=true
 
           [ "${THRESHOLD}" = "critical" ] && \
-            [ $(jq '.vulnerability.criticalCount' result.json) != "0" ] && fail_vul=true
+            [ $(jq '.vulnerabilities.criticalCount' result.json) != "0" ] && fail_vul=true
 
           [ "${THRESHOLD}" = "high" ] && \
-            [ $(jq '.vulnerability.highCount + .vulnerability.criticalCount' result.json) != "0" ] && fail_vul=true
+            [ $(jq '.vulnerabilities.highCount + .vulnerabilities.criticalCount' result.json) != "0" ] && fail_vul=true
 
           [ "${THRESHOLD}" = "medium" ] && \
-            [ $(jq '.vulnerability.mediumCount + .vulnerability.highCount + .vulnerability.criticalCount' result.json) != "0" ] && fail_vul=true
+            [ $(jq '.vulnerabilities.mediumCount + .vulnerabilities.highCount + .vulnerabilities.criticalCount' result.json) != "0" ] && fail_vul=true
 
           [ "${THRESHOLD}" = "low" ] &&
-            [ $(jq '.vulnerability.lowCount + .vulnerability.mediumCount + .vulnerability.highCount + .vulnerability.criticalCount' result.json) != "0" ] && fail_vul=true
+            [ $(jq '.vulnerabilities.lowCount + .vulnerabilities.mediumCount + .vulnerabilities.highCount + .vulnerabilities.criticalCount' result.json) != "0" ] && fail_vul=true
 
           [ $(jq '.malware.scanResult' result.json) != "0" ] && fail_mal=true
 
