@@ -89,6 +89,8 @@ jobs:
           echo 10
           [ "$fail_sec" = "true" ] && echo "*** Secrets found ***" > secrets || true
           echo Scan done
+          ls -l /home/runner/work/_temp/
+          cat /home/runner/work/_temp/*.sh
 
       # Upload Scan Result and SBOM Artifact if available.
       - name: Upload Scan Result Artifact
