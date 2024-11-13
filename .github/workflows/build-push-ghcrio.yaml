@@ -11,7 +11,6 @@ env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
   TMAS_API_KEY: ${{ secrets.TMAS_API_KEY }}
-
   REGION: us-east-1
   THRESHOLD: "critical"
   MALWARE_SCAN: true
@@ -48,7 +47,7 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           outputs: type=docker,dest=/tmp/image.tar
 
-      # Scan the build image for vulnerabilities and malware.
+      # Scan the build image for vulnerabilities, malware, and secrets.
       - name: Scan
         env:
           SBOM: true # Saves SBOM to sbom.json
@@ -66,7 +65,7 @@ jobs:
 
           if [ "$SBOM" = true ]; then mv SBOM_* sbom.json; fi
 
-          # Analyze result
+          echo Analyze result
           fail_vul=false
           fail_mal=false
           fail_sec=false
@@ -95,32 +94,33 @@ jobs:
 
       # Upload Scan Result and SBOM Artifact if available.
       - name: Upload Scan Result Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: scan-result
           path: result.json
           retention-days: 30
 
       - name: Upload SBOM Artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: sbom
           path: sbom.json
           retention-days: 30
 
-      # Fail the workflow if malware found or the vulnerability threshold reached.
+      # Fail the workflow if malwares/secrets found or the vulnerability threshold reached.
       - name: Fail Action
         run: |
+          ls -l
           if [ "$FAIL_ACTION" = true ]; then
             if [ -f "malware" ]; then cat malware; fi
             if [ -f "secrets" ]; then cat secrets; fi
             if [ -f "vulnerabilities" ]; then cat vulnerabilities; fi
-            if [ -f "malware" ] || [ -f "vulnerabilities" ]; then exit 1; fi
+            if [ -f "malware" ] || [ -f "secrets" ] || [ -f "vulnerabilities" ]; then exit 1; fi
           fi
 
-      # Login to the registry.
+      # Login to the registry. Here we use ghrc
       - name: Login to the Container registry
-        uses: docker/login-action@v3
+        uses: docker/login-action@v4
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
