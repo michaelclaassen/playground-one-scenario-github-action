@@ -11,6 +11,7 @@ env:
   REGION: us-east-1
   THRESHOLD: "critical"
   MALWARE_SCAN: true
+  SECRETS_SCAN: true
 
 jobs:
   docker:
@@ -39,9 +40,15 @@ jobs:
           SBOM: true # Saves SBOM to SBOM.json so you can export it as an artifact later.
         run: |
           # Install tmas latest version
-          curl -s -L https://gist.github.com/raphabot/abae09b46c29afc7c3b918b7b8ec2a5c/raw/ | bash
+          curl -sL https://gist.githubusercontent.com/mawinkler/72a89148b3bcf7ca06b1f26bc84d763f/raw | bash
 
-          tmas scan "$(if [ "$MALWARE_SCAN" = true ]; then echo "--malwareScan"; fi)" -r "$REGION" docker-archive:/tmp/image.tar "$(if [ "$SBOM" = true ]; then echo "--saveSBOM"; fi)" | tee result.json
+          tmas scan \
+            -V \
+            "$(if [ "$MALWARE_SCAN" = true ]; then echo "-M"; fi)" \
+            "$(if [ "$SECRETS_SCAN" = true ]; then echo "-S"; fi)" \
+             -r "$REGION" docker-archive:/tmp/image.tar \
+             "$(if [ "$SBOM" = true ]; then echo "--saveSBOM"; fi)" | \
+             tee result.json
 
           if [ "$SBOM" = true ]; then mv SBOM_* sbom.json; fi
 
@@ -64,7 +71,11 @@ jobs:
 
           [ $(jq '.malware.scanResult' result.json) -ne 0 ] && fail=6
 
+          [ $(jq '.secrets.unmitigatedFindingsCount' result.json) -ne 0 ] && fail=7
+
           [ $fail -eq 6 ] && echo !!! Malware found !!! > malware || true
+
+          [ $fail -eq 7 ] && echo !!! Secrets found !!! > secrets || true
 
           [ $fail -ne 0 ] && echo !!! Vulnerability threshold exceeded !!! > vulnerabilities || true
 
@@ -88,8 +99,9 @@ jobs:
         run: |
           ls -l
           if [ -f "malware" ]; then cat malware; fi
+          if [ -f "secrets" ]; then cat secrets; fi
           if [ -f "vulnerabilities" ]; then cat vulnerabilities; fi
-          if [ -f "malware" ] || [ -f "vulnerabilities" ]; then exit 1; fi
+          if [ -f "malware" ] || [ -f "secrets" ] || [ -f "vulnerabilities" ]; then exit 1; fi
 
       # Login to the registry. Here we just use Docker
       - name: Login to Docker Hub
@@ -110,4 +122,8 @@ jobs:
       # Rescan in the registry to support admission control
       - name: Registry Scan
         run: |
-          tmas scan "$(if [ "$MALWARE_SCAN" = true ]; then echo "--malwareScan"; fi)" -r "$REGION" registry:${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.IMAGE_NAME }}:${{ secrets.IMAGE_TAG }}
+          tmas scan \
+            -V \
+            "$(if [ "$MALWARE_SCAN" = true ]; then echo "-M"; fi)" \
+            "$(if [ "$SECRETS_SCAN" = true ]; then echo "-S"; fi)" \
+            -r "$REGION" registry:${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.IMAGE_NAME }}:${{ secrets.IMAGE_TAG }}
