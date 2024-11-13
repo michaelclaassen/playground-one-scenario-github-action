@@ -1,0 +1,134 @@
+name: ci-dockerio
+
+# A push on the repo triggers the workflow
+on:
+  push:
+    branches:
+      - "main"
+
+env:
+  TMAS_API_KEY: ${{ secrets.TMAS_API_KEY }}
+  REGION: us-east-1
+  THRESHOLD: "critical"
+  MALWARE_SCAN: true
+  SECRETS_SCAN: true
+
+jobs:
+  docker:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Prepare the Docker Buildx environment
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v3
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # At first, we build the image and save it as a tar ball
+      - name: Build and store
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          tags: ${{ secrets.IMAGE_NAME }}:${{ secrets.IMAGE_TAG }}
+          outputs: type=docker,dest=/tmp/image.tar
+
+      # Next step is to scan the build image for vulnerabilities and malware
+      - name: Scan
+        env:
+          SBOM: true # Saves SBOM to SBOM.json so you can export it as an artifact later.
+        run: |
+          # Install tmas latest version
+          curl -sL https://gist.githubusercontent.com/mawinkler/72a89148b3bcf7ca06b1f26bc84d763f/raw | bash
+
+          tmas scan \
+            -V \
+            "$(if [ "$MALWARE_SCAN" = true ]; then echo "-M"; fi)" \
+            "$(if [ "$SECRETS_SCAN" = true ]; then echo "-S"; fi)" \
+             -r "$REGION" docker-archive:/tmp/image.tar \
+             "$(if [ "$SBOM" = true ]; then echo "--saveSBOM"; fi)" | \
+             tee result.json
+
+          if [ "$SBOM" = true ]; then mv SBOM_* sbom.json; fi
+
+          echo Analyze result
+          fail=0
+          [ "${THRESHOLD}" = "any" ] && \
+            [ $(jq '.vulnerability.totalVulnCount' result.json) -ne 0 ] && fail=true
+
+          [ "${THRESHOLD}" = "critical" ] && \
+            [ $(jq '.vulnerability.criticalCount' result.json) -ne 0 ] && fail=true
+
+          [ "${THRESHOLD}" = "high" ] && \
+            [ $(jq '.vulnerability.highCount + .vulnerability.criticalCount' result.json) -ne 0 ] && fail=true
+
+          [ "${THRESHOLD}" = "medium" ] && \
+            [ $(jq '.vulnerability.mediumCount + .vulnerability.highCount + .vulnerability.criticalCount' result.json) -ne 0 ] && fail=true
+
+          [ "${THRESHOLD}" = "low" ] &&
+            [ $(jq '.vulnerability.lowCount + .vulnerability.mediumCount + .vulnerability.highCount + .vulnerability.criticalCount' result.json) -ne 0 ] && fail=true
+
+          [ $(jq '.malware.scanResult' result.json) -ne 0 ] && fail_mal=true
+          
+          [ $(jq '.secrets.unmitigatedFindingsCount' result.json) -ne 0 ] && fail_sec=true
+
+          [ "$fail_vul" = true ] && echo !!! Vulnerability threshold exceeded !!! > vulnerabilities || true
+          [ "$fail_mal" = true ] && echo !!! Malware found !!! > malware || true
+          [ "$fail_sec" = true ] && echo !!! Secrets found !!! > secrets || true
+
+      # Upload Scan Result and SBOM Artifact if available
+      - name: Upload Scan Result Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: scan-result
+          path: result.json
+          retention-days: 30
+
+      - name: Upload SBOM Artifact
+        uses: actions/upload-artifact@v3
+        with:
+          name: sbom
+          path: sbom.json
+          retention-days: 30
+
+      # Fail the workflow if we found malware or reach the vulnerability threshold
+      - name: Fail Scan
+        run: |
+          ls -l
+          if [ "$FAIL_ACTION" = true ]; then
+            if [ -f "malware" ]; then cat malware; fi
+            if [ -f "secrets" ]; then cat secrets; fi
+            if [ -f "vulnerabilities" ]; then cat vulnerabilities; fi
+            if [ -f "malware" ] || [ -f "secrets" ] || [ -f "vulnerabilities" ]; then exit 1; fi
+          fi
+
+      # Login to the registry. Here we just use Docker
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # Rebuild the image and push to registry. This is fast since everything is cached.
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          platforms: linux/amd64,linux/arm64
+          push: true
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.IMAGE_NAME }}:${{ secrets.IMAGE_TAG }}
+
+      - name: Summarize the Docker digest and tags
+        run: |
+          echo 'Digest: ${{ steps.build.outputs.digest }}'
+          echo 'Tags: ${{ steps.meta.outputs.tags }}'
+          
+      # Rescan in the registry to support admission control
+      - name: Registry Scan
+        run: |
+          tmas scan \
+            -V \
+            "$(if [ "$MALWARE_SCAN" = true ]; then echo "-M"; fi)" \
+            "$(if [ "$SECRETS_SCAN" = true ]; then echo "-S"; fi)" \
+            -r "$REGION" registry:${{ secrets.DOCKERHUB_USERNAME }}/${{ secrets.IMAGE_NAME }}:${{ secrets.IMAGE_TAG }}
