@@ -65,7 +65,6 @@ jobs:
 
           if [ "$SBOM" = "true" ]; then mv SBOM_* sbom.json; fi
 
-          echo Analyze result
           fail_vul=false
           fail_mal=false
           fail_sec=false
@@ -112,7 +111,6 @@ jobs:
       # Fail the workflow if malwares/secrets found or the vulnerability threshold reached.
       - name: Fail Action
         run: |
-          ls -l
           if [ "$FAIL_ACTION" = true ]; then
             if [ -f "malware" ]; then cat malware; fi
             if [ -f "secrets" ]; then cat secrets; fi
