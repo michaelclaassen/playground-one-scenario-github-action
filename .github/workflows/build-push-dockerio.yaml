@@ -51,13 +51,13 @@ jobs:
 
           tmas scan \
             -V \
-            "$(if [ "$MALWARE_SCAN" = true ]; then echo "-M"; fi)" \
-            "$(if [ "$SECRETS_SCAN" = true ]; then echo "-S"; fi)" \
+            "$(if [ "$MALWARE_SCAN" = "true" ]; then echo "-M"; fi)" \
+            "$(if [ "$SECRETS_SCAN" = "true" ]; then echo "-S"; fi)" \
             -r "$REGION" docker-archive:/tmp/image.tar \
-            "$(if [ "$SBOM" = true ]; then echo "--saveSBOM"; fi)" | \
+            "$(if [ "$SBOM" = "true" ]; then echo "--saveSBOM"; fi)" | \
             tee result.json
-
-          if [ "$SBOM" = true ]; then mv SBOM_* sbom.json; fi
+          echo 0
+          if [ "$SBOM" = "true" ]; then mv SBOM_* sbom.json; fi
 
           echo Analyze result
           fail_vul=false
