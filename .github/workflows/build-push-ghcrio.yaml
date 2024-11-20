@@ -148,4 +148,4 @@ jobs:
             -V \
             "$(if [ "$MALWARE_SCAN" = true ]; then echo "-M"; fi)" \
             "$(if [ "$SECRETS_SCAN" = true ]; then echo "-S"; fi)" \
-            -r "$REGION" -p linux/amd64 registry:${{ steps.meta.outputs.tags }} || true
+            -r "$REGION" registry:${{ steps.meta.outputs.tags }} || true
