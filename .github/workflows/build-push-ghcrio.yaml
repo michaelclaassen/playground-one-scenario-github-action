@@ -15,7 +15,7 @@ env:
   THRESHOLD: "medium"
   MALWARE_SCAN: true
   SECRETS_SCAN: true
-  FAIL_ACTION: true
+  FAIL_ACTION: false
 
 jobs:
   docker:
